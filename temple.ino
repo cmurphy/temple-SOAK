@@ -54,6 +54,16 @@ void sunset() {
             }
             break;
         default:
-            leds.fill_solid(CRGB::White);
+            hsv.hue = 160;
+            hsv.val = 255;
+            hsv.sat = 255;
+            CHSV target = CHSV(60, 0, 255);
+            CHSV current = hsv;
+            static uint8_t amount = 0;
+            if (amount < 255) {
+                current = blend(current, target, amount++);
+                leds.fill_solid(current);
+            }
     }
+    FastLED.show();
 }
