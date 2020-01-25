@@ -8,12 +8,13 @@ CRGBArray<NUM_LEDS> leds;
 
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
+    FastLED.setBrightness(125);
 }
 
 void loop() {
     sunset();
-    FastLED.delay(5);
-    FastLED.setBrightness(125);
+    FastLED.show();
+    FastLED.delay(10);
 }
 
 void sunset() {
@@ -65,5 +66,4 @@ void sunset() {
                 leds.fill_solid(current);
             }
     }
-    FastLED.show();
 }
