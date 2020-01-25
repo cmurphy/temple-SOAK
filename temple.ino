@@ -13,6 +13,9 @@ DEFINE_GRADIENT_PALETTE(twilightPalette) {
     255, 171,   0,  85, // pink
 };
 
+static CRGBPalette16 currentPalette(CHSV(160, 255, 255));
+static CRGBPalette16 targetPalette(twilightPalette);
+
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
     FastLED.setBrightness(125);
@@ -63,10 +66,9 @@ void sunset() {
             break;
         case 1: // map to twilight colors, aqua through pink
             // https://pastebin.com/r70Qk6Bn
-            static CRGBPalette16 currentPalette(CHSV(160, 255, 255));
-            static CRGBPalette16 targetPalette(twilightPalette);
             if (currentPalette == targetPalette) {
                 stage++;
+                break;
             }
             EVERY_N_MILLIS(40) {
                 nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
@@ -80,15 +82,14 @@ void sunset() {
             dist += beatsin8(10, 1, 4);
             break;
         default:
-            hsv.hue = 160;
-            hsv.val = 255;
-            hsv.sat = 255;
-            CHSV target = CHSV(60, 0, 255);
-            CHSV current = hsv;
-            static uint8_t amount = 0;
-            if (amount < 255) {
-                current = blend(current, target, amount++);
-                leds.fill_solid(current);
+            CRGBPalette16 finalPalette(CHSV(60, 0, 255));
+            EVERY_N_MILLIS(40) {
+                nblendPaletteTowardPalette(currentPalette, finalPalette, 24);
             }
+            for (int i = 0; i < NUM_LEDS; i++) {
+                uint8_t index = inoise8(i*scale, dist+i*scale);
+                leds[i] = ColorFromPalette(currentPalette, index, 255, LINEARBLEND);
+            }
+            dist += beatsin8(10, 1, 4);
     }
 }
