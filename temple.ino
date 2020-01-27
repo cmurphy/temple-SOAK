@@ -36,15 +36,15 @@ void loop() {
 }
 
 void sunset() {
-    static uint8_t hue = 160; // deep blue
-    static uint8_t brightness = 0;
-    const uint8_t maxBrightness = 250;
+    const  uint8_t maxBrightness = 250;
     static uint8_t active = 0; // active ring
     static uint8_t stage = 0;
     CHSV hsv;
-    hsv.sat = 255;
     switch (stage) {
         case 0: // fill rings one by one with deep blue
+            static uint8_t hue = 160; // deep blue
+            static uint8_t brightness = 0;
+            hsv.sat = 255;
             hsv.hue = hue;
             for (int i = 0; i < NUM_RINGS; i++) {
                 for (int j = 0; j < RING; j++) {
