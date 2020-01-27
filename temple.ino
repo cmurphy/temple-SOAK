@@ -1,9 +1,10 @@
 #include "FastLED.h"
 
-#define NUM_LEDS 80
-#define DATA_PIN 4
 #define RING 16
 #define NUM_RINGS 5
+#define NUM_LEDS (RING*NUM_RINGS)
+#define DATA_PIN 4
+
 CRGBArray<NUM_LEDS> leds;
 
 DEFINE_GRADIENT_PALETTE(twilightPalette) {
