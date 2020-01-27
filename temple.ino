@@ -13,8 +13,15 @@ DEFINE_GRADIENT_PALETTE(twilightPalette) {
     255, 171,   0,  85, // pink
 };
 
+DEFINE_GRADIENT_PALETTE(sunsetPaletteDef) {
+      0, 255,   0,  0, // red
+    128, 171,  85,  0, // orange
+    255, 171, 171,  0, // yellow
+};
+
 static CRGBPalette16 currentPalette(CHSV(160, 255, 255));
 static CRGBPalette16 targetPalette(twilightPalette);
+CRGBPalette16 sunsetPalette(sunsetPaletteDef);
 
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
@@ -77,9 +84,22 @@ void sunset() {
             static uint16_t dist;
             for (int i = 0; i < NUM_LEDS; i++) {
                 uint8_t index = inoise8(i*scale, dist+i*scale);
-                leds[i] = ColorFromPalette(currentPalette, index, 255, LINEARBLEND);
+                leds[i] = ColorFromPalette(currentPalette, index, 255);
             }
             dist += beatsin8(10, 1, 4);
+            break;
+        case 2: // graduate to deep sunset colors, yellow through red
+            if (currentPalette == sunsetPalette) {
+                stage++;
+                break;
+            }
+            EVERY_N_MILLIS(40) {
+                nblendPaletteTowardPalette(currentPalette, sunsetPalette, 12);
+            }
+            for (int i = 0; i < NUM_LEDS; i++) {
+                uint8_t index = float(255*i)/NUM_LEDS;
+                leds[i] = ColorFromPalette(currentPalette, index);
+            }
             break;
         default:
             CRGBPalette16 finalPalette(CHSV(60, 0, 255));
@@ -87,9 +107,7 @@ void sunset() {
                 nblendPaletteTowardPalette(currentPalette, finalPalette, 24);
             }
             for (int i = 0; i < NUM_LEDS; i++) {
-                uint8_t index = inoise8(i*scale, dist+i*scale);
-                leds[i] = ColorFromPalette(currentPalette, index, 255, LINEARBLEND);
+                leds[i] = ColorFromPalette(currentPalette, float(255*i)/NUM_LEDS);
             }
-            dist += beatsin8(10, 1, 4);
     }
 }
