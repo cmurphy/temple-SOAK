@@ -21,6 +21,7 @@ DEFINE_GRADIENT_PALETTE(sunsetPalette) {
 };
 
 static CRGBPalette16 currentPalette(CHSV(160, 255, 255));
+static CRGBPalette16 oldPalette(currentPalette);
 static CRGBPalette16 targetPalette(twilightPalette);
 
 void setup() {
@@ -73,20 +74,34 @@ void sunset() {
             break;
         case 1: // map to twilight colors, aqua through pink
             // https://pastebin.com/r70Qk6Bn
-            if (currentPalette == targetPalette) {
-                stage++;
-                break;
-            }
-            EVERY_N_MILLIS(40) {
+            EVERY_N_MILLIS(10) {
                 nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
             }
             #define scale 30
             static uint16_t dist;
-            for (int i = 0; i < NUM_LEDS; i++) {
-                uint8_t index = inoise8(i*scale, dist+i*scale);
-                leds[i] = ColorFromPalette(currentPalette, index, 255);
+            for (int i = 0; i < NUM_RINGS; i++) {
+                for (int j = 0; j < RING; j++) {
+                    int led = i*RING+j;
+                    uint8_t index = inoise8(led*scale, dist+led*scale);
+                    if (i == active) {
+                        leds[led] = ColorFromPalette(currentPalette, index, 255);
+                    } else if (i < active) {
+                        leds[led] = ColorFromPalette(targetPalette, index, 255);
+                    } else {
+                        leds[led] = ColorFromPalette(oldPalette, index, 255);
+                    }
+                }
             }
             dist += beatsin8(10, 1, 4);
+            if (currentPalette == targetPalette) {
+                if (active == NUM_RINGS) {
+                    stage++;
+                    active = 0;
+                } else {
+                    currentPalette = oldPalette;
+                    active++;
+                }
+            }
             break;
         case 2: // graduate to deep sunset colors, yellow through red
             targetPalette = sunsetPalette;
