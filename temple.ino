@@ -98,7 +98,8 @@ void sunset() {
             }
             for (int i = 0; i < NUM_LEDS; i++) {
                 uint8_t index = float(255*i)/NUM_LEDS;
-                leds[i] = ColorFromPalette(currentPalette, index);
+                CRGB color = ColorFromPalette(currentPalette, index);
+                leds[i] = blend(leds[i], color, beatsin8(10, 1, 4));
             }
             break;
         default:
@@ -107,7 +108,8 @@ void sunset() {
                 nblendPaletteTowardPalette(currentPalette, finalPalette, 24);
             }
             for (int i = 0; i < NUM_LEDS; i++) {
-                leds[i] = ColorFromPalette(currentPalette, float(255*i)/NUM_LEDS);
+                CRGB color = ColorFromPalette(currentPalette, float(255*i)/NUM_LEDS);
+                leds[i] = blend(leds[i], color, beatsin8(10, 1, 4));
             }
     }
 }
