@@ -20,13 +20,14 @@ DEFINE_GRADIENT_PALETTE(sunsetPalette) {
     255, 171, 171,  0, // yellow
 };
 
-static CRGBPalette16 currentPalette(CHSV(160, 255, 255));
+static CRGBPalette16 currentPalette(CRGB::Black);
 static CRGBPalette16 oldPalette(currentPalette);
-static CRGBPalette16 targetPalette(twilightPalette);
+static CRGBPalette16 targetPalette(CHSV(160, 255, 255));
 
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
     FastLED.setBrightness(125);
+    leds.fill_solid(CRGB::Black);
 }
 
 void loop() {
@@ -36,44 +37,30 @@ void loop() {
 }
 
 void sunset() {
-    const  uint8_t maxBrightness = 250;
     static uint8_t active = 0; // active ring
     static uint8_t stage = 0;
-    CHSV hsv;
+
     switch (stage) {
         case 0: // fill rings one by one with deep blue
-            static uint8_t hue = 160; // deep blue
-            static uint8_t brightness = 0;
-            hsv.sat = 255;
-            hsv.hue = hue;
-            for (int i = 0; i < NUM_RINGS; i++) {
-                for (int j = 0; j < RING; j++) {
-                    int led = i*RING+j;
-                    if (i == active) {
-                        hsv.val = brightness;
-                        leds[led] = hsv;
-                    } else if (i < active) {
-                        hsv.val = maxBrightness;
-                        leds[led] = hsv;
-                    } else {
-                        leds[led] = CRGB::Black;
-                    }
-                }
+            EVERY_N_MILLIS(5) {
+                nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
             }
-            if (brightness >= maxBrightness) {
-                brightness = 0;
-                if (active == NUM_RINGS) {
+            leds(active*RING, (active+1)*RING-1).fill_solid(ColorFromPalette(currentPalette, 0));
+            if (active > 0) leds(0, active*RING-1).fill_solid(ColorFromPalette(targetPalette, 0));
+            if (currentPalette == targetPalette) {
+                if (active == NUM_RINGS - 1) {
                     stage++;
                     active = 0;
+                    oldPalette = currentPalette;
                 } else {
+                    currentPalette = oldPalette;
                     active++;
                 }
-            } else {
-                brightness += 2;
             }
             break;
         case 1: // map to twilight colors, aqua through pink
             // https://pastebin.com/r70Qk6Bn
+            targetPalette = twilightPalette;
             EVERY_N_MILLIS(10) {
                 nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
             }
