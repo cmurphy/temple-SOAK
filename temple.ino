@@ -5,6 +5,9 @@
 #define NUM_LEDS (RING*NUM_RINGS)
 #define DATA_PIN 4
 
+#define LOW_BRIGHTNESS 80
+#define MAX_BRIGHTNESS 255
+
 CRGBArray<NUM_LEDS> leds;
 
 DEFINE_GRADIENT_PALETTE(twilightPalette) {
@@ -26,7 +29,7 @@ static CRGBPalette16 targetPalette(CRGB::DeepSkyBlue);
 
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
-    FastLED.setBrightness(125);
+    FastLED.setBrightness(LOW_BRIGHTNESS);
     leds.fill_solid(CRGB::Black);
 }
 
@@ -45,8 +48,8 @@ void sunset() {
             EVERY_N_MILLIS(5) {
                 nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
             }
-            leds(active*RING, (active+1)*RING-1).fill_solid(ColorFromPalette(currentPalette, 0));
-            if (active > 0) leds(0, active*RING-1).fill_solid(ColorFromPalette(targetPalette, 0));
+            leds(active*RING, (active+1)*RING-1).fill_solid(ColorFromPalette(currentPalette, 0, LOW_BRIGHTNESS));
+            if (active > 0) leds(0, active*RING-1).fill_solid(ColorFromPalette(targetPalette, 0, LOW_BRIGHTNESS));
             if (currentPalette == targetPalette) {
                 if (active == NUM_RINGS - 1) {
                     stage++;
@@ -71,11 +74,11 @@ void sunset() {
                     int led = i*RING+j;
                     uint8_t index = inoise8(led*scale, dist+led*scale);
                     if (i == active) {
-                        leds[led] = ColorFromPalette(currentPalette, index, 255);
+                        leds[led] = ColorFromPalette(currentPalette, index, LOW_BRIGHTNESS);
                     } else if (i < active) {
-                        leds[led] = ColorFromPalette(targetPalette, index, 255);
+                        leds[led] = ColorFromPalette(targetPalette, index, LOW_BRIGHTNESS);
                     } else {
-                        leds[led] = ColorFromPalette(oldPalette, index, 255);
+                        leds[led] = ColorFromPalette(oldPalette, index, LOW_BRIGHTNESS);
                     }
                 }
             }
@@ -101,7 +104,7 @@ void sunset() {
             }
             for (int i = 0; i < NUM_LEDS; i++) {
                 uint8_t index = float(255*i)/NUM_LEDS;
-                CRGB color = ColorFromPalette(currentPalette, index);
+                CRGB color = ColorFromPalette(currentPalette, index, MAX_BRIGHTNESS);
                 leds[i] = blend(leds[i], color, beatsin8(10, 1, 4));
             }
             break;
@@ -111,7 +114,7 @@ void sunset() {
                 nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
             }
             for (int i = 0; i < NUM_LEDS; i++) {
-                CRGB color = ColorFromPalette(currentPalette, float(255*i)/NUM_LEDS);
+                CRGB color = ColorFromPalette(currentPalette, float(255*i)/NUM_LEDS, MAX_BRIGHTNESS);
                 leds[i] = blend(leds[i], color, beatsin8(10, 1, 4));
             }
     }
