@@ -43,6 +43,9 @@ void sunset() {
     static uint8_t active = 0; // active ring
     static uint8_t stage = 0;
 
+    const  uint8_t  scale = 30;
+    static uint16_t dist;
+
     switch (stage) {
         case 0: // fill rings one by one with deep blue
             EVERY_N_MILLIS(1) {
@@ -67,8 +70,6 @@ void sunset() {
             EVERY_N_MILLIS(10) {
                 nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
             }
-            #define scale 30
-            static uint16_t dist;
             for (int i = 0; i < NUM_RINGS; i++) {
                 for (int j = 0; j < RING; j++) {
                     int led = i*RING+j;
@@ -87,6 +88,7 @@ void sunset() {
                 if (active == NUM_RINGS) {
                     stage++;
                     active = 0;
+                    oldPalette = currentPalette;
                 } else {
                     currentPalette = oldPalette;
                     active++;
@@ -94,6 +96,7 @@ void sunset() {
             }
             break;
         case 2: // graduate to deep sunset colors, yellow through red
+            static uint8_t delay = 5;
             targetPalette = sunsetPalette;
             if (currentPalette == targetPalette) {
                 stage++;
@@ -102,11 +105,27 @@ void sunset() {
             EVERY_N_MILLIS(40) {
                 nblendPaletteTowardPalette(currentPalette, targetPalette, 12);
             }
-            for (int i = 0; i < NUM_LEDS; i++) {
-                uint8_t index = float(255*i)/NUM_LEDS;
-                CRGB color = ColorFromPalette(currentPalette, index, MAX_BRIGHTNESS);
-                leds[i] = blend(leds[i], color, beatsin8(10, 1, 4));
+            EVERY_N_SECONDS(2) {
+                if (delay > 0) {
+                    delay--;
+                } else {
+                    active++;
+                }
             }
+            for (int i = 0; i < NUM_RINGS; i++) {
+                for (int j = 0; j < RING; j++) {
+                    int led = i*RING+j;
+                    if (i <= active) {
+                        uint8_t index = float(255*led)/NUM_LEDS;
+                        CRGB color = ColorFromPalette(currentPalette, index, MAX_BRIGHTNESS);
+                        leds[led] = blend(leds[led], color, beatsin8(10, 1, 4));
+                    } else {
+                        uint8_t index = inoise8(led*scale, dist+led*scale);
+                        leds[led] = ColorFromPalette(oldPalette, index, LOW_BRIGHTNESS);
+                    }
+                }
+            }
+            dist += beatsin8(10, 1, 4);
             break;
         default: // fade to bright white
             targetPalette = CRGBPalette16(CHSV(60, 0, 255));
