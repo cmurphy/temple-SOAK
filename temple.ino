@@ -36,7 +36,7 @@ void setup() {
 void loop() {
     sunset();
     FastLED.show();
-    FastLED.delay(10);
+    FastLED.delay(5);
 }
 
 void sunset() {
@@ -45,8 +45,8 @@ void sunset() {
 
     switch (stage) {
         case 0: // fill rings one by one with deep blue
-            EVERY_N_MILLIS(5) {
-                nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
+            EVERY_N_MILLIS(1) {
+                nblendPaletteTowardPalette(currentPalette, targetPalette, 255);
             }
             leds(active*RING, (active+1)*RING-1).fill_solid(ColorFromPalette(currentPalette, 0, LOW_BRIGHTNESS));
             if (active > 0) leds(0, active*RING-1).fill_solid(ColorFromPalette(targetPalette, 0, LOW_BRIGHTNESS));
