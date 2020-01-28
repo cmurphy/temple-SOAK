@@ -22,7 +22,7 @@ DEFINE_GRADIENT_PALETTE(sunsetPalette) {
 
 static CRGBPalette16 currentPalette(CRGB::Black);
 static CRGBPalette16 oldPalette(currentPalette);
-static CRGBPalette16 targetPalette(CHSV(160, 255, 255));
+static CRGBPalette16 targetPalette(CRGB::DeepSkyBlue);
 
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
