@@ -19,7 +19,7 @@ DEFINE_GRADIENT_PALETTE(twilightPalette) {
     255, 171,   0,  85, // pink
 };
 
-DEFINE_GRADIENT_PALETTE(sunsetPalette) {
+DEFINE_GRADIENT_PALETTE(sunrisePalette) {
       0, 255,   0,  0, // red
     128, 171,  85,  0, // orange
     255, 171, 171,  0, // yellow
@@ -47,7 +47,7 @@ bool isNighttime() {
     return NIGHTTIME;
 }
 
-void sunset() {
+void sunrise() {
     static uint8_t active = 0; // active ring
     static uint8_t stage = 0;
 
@@ -103,9 +103,9 @@ void sunset() {
                 }
             }
             break;
-        case 2: // graduate to deep sunset colors, yellow through red
+        case 2: // graduate to deep sunrise colors, yellow through red
             static uint8_t delay = 5;
-            targetPalette = sunsetPalette;
+            targetPalette = sunrisePalette;
             if (currentPalette == targetPalette) {
                 stage++;
                 break;
@@ -149,7 +149,7 @@ void sunset() {
     FastLED.delay(5);
 }
 
-void sunrise() {
+void sunset() {
     static uint8_t stage = 0;
     static uint8_t streak = 0;
     static uint8_t twinkleCount = 0;
