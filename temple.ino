@@ -8,6 +8,8 @@
 #define LOW_BRIGHTNESS 80
 #define MAX_BRIGHTNESS 255
 
+#define NIGHTTIME 1
+
 CRGBArray<NUM_LEDS> leds;
 
 DEFINE_GRADIENT_PALETTE(twilightPalette) {
@@ -34,9 +36,15 @@ void setup() {
 }
 
 void loop() {
-    sunset();
-    FastLED.show();
-    FastLED.delay(5);
+    if (isNighttime()) {
+        sunset();
+    } else {
+        sunrise();
+    }
+}
+
+bool isNighttime() {
+    return NIGHTTIME;
 }
 
 void sunset() {
@@ -136,5 +144,45 @@ void sunset() {
                 CRGB color = ColorFromPalette(currentPalette, float(255*i)/NUM_LEDS, MAX_BRIGHTNESS);
                 leds[i] = blend(leds[i], color, beatsin8(10, 1, 4));
             }
+    }
+    FastLED.show();
+    FastLED.delay(5);
+}
+
+void sunrise() {
+    static uint8_t stage = 0;
+    static uint8_t streak = 0;
+    static uint8_t twinkleCount = 0;
+    switch(stage) {
+        case 0:
+            meteorRain(RING, RING*3, 64);
+            streak++;
+            if (streak == 3) stage++;
+            break;
+    }
+}
+
+// https://www.tweaking4all.com/hardware/arduino/adruino-led-strip-effects/#LEDStripEffectMeteorRain
+void meteorRain(byte meteorSize, byte meteorTrailDecay, int SpeedDelay) {
+    CHSV hsv(212, 128, 255); // electric purple
+    for(int i = 0; i < 16*NUM_LEDS; i+=RING) {
+        // fade brightness all LEDs one step
+        for(int j=0; j<NUM_LEDS; j++) {
+            meteorTrailDecay -= j;
+            if (meteorTrailDecay < 0) meteorTrailDecay = 0;
+            if ((random(j)<meteorSize)) {
+                leds[j].fadeToBlackBy(meteorTrailDecay);
+            }
+        }
+
+        // draw meteor
+        for(int j = 0; j < meteorSize; j++) {
+            if( ( i-j <NUM_LEDS) && (i-j>=0) ) {
+                leds[i-j] = hsv;
+            }
+        }
+
+        FastLED.show();
+        FastLED.delay(SpeedDelay);
     }
 }
