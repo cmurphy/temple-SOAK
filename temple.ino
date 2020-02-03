@@ -53,7 +53,6 @@ void sunrise() {
     static uint8_t active = 0; // active ring
     static uint8_t stage = 0;
 
-    const  uint8_t  scale = 30;
     static uint16_t dist;
 
     switch (stage) {
@@ -83,7 +82,7 @@ void sunrise() {
             for (int i = 0; i < NUM_RINGS; i++) {
                 for (int j = 0; j < RING; j++) {
                     int led = i*RING+j;
-                    uint8_t index = inoise8(led*scale, dist+led*scale);
+                    uint8_t index = inoise8(led*NOISE_SCALE, dist+led*NOISE_SCALE);
                     if (i == active) {
                         leds[led] = ColorFromPalette(currentPalette, index, LOW_BRIGHTNESS);
                     } else if (i < active) {
@@ -130,7 +129,7 @@ void sunrise() {
                         CRGB color = ColorFromPalette(currentPalette, index, MAX_BRIGHTNESS);
                         leds[led] = blend(leds[led], color, beatsin8(10, 1, 4));
                     } else {
-                        uint8_t index = inoise8(led*scale, dist+led*scale);
+                        uint8_t index = inoise8(led*NOISE_SCALE, dist+led*NOISE_SCALE);
                         leds[led] = ColorFromPalette(oldPalette, index, LOW_BRIGHTNESS);
                     }
                 }
