@@ -8,6 +8,8 @@
 #define LOW_BRIGHTNESS 80
 #define MAX_BRIGHTNESS 255
 
+#define NOISE_SCALE 30
+
 #define NIGHTTIME 1
 
 CRGBArray<NUM_LEDS> leds;
@@ -153,12 +155,42 @@ void sunset() {
     static uint8_t stage = 0;
     static uint8_t streak = 0;
     static uint8_t twinkleCount = 0;
+    static uint8_t delay = 5;
     switch(stage) {
         case 0:
             meteorRain(RING, RING*3, 64);
             streak++;
             if (streak == 3) stage++;
             break;
+        case 1:
+            EVERY_N_MILLIS(100) {
+                twinkle(twinkleCount++);
+            }
+            if (twinkleCount == NUM_LEDS) {
+                stage++;
+                currentPalette = CRGBPalette16(CRGB(148, 0, 148));
+            }
+            break;
+        case 2:
+            targetPalette = twilightPalette;
+            if (currentPalette == targetPalette) {
+                noisyBlend(false);
+                EVERY_N_SECONDS(2) {
+                    if (delay > 0) {
+                        delay--;
+                    } else {
+                        stage++;
+                    }
+                }
+            } else {
+                noisyBlend(true);
+            }
+            break;
+        default:
+            targetPalette = CRGBPalette16(CRGB::White);
+            if (currentPalette != targetPalette) {
+                noisyBlend(false);
+            }
     }
 }
 
@@ -185,4 +217,62 @@ void meteorRain(byte meteorSize, byte meteorTrailDecay, int SpeedDelay) {
         FastLED.show();
         FastLED.delay(SpeedDelay);
     }
+}
+
+// https://gist.github.com/kriegsman/88954aae22b03a664081
+void twinkle(uint8_t chance) {
+    enum { SteadyDim, GettingBrighter, GettingDimmerAgain };
+    static uint8_t PixelState[NUM_LEDS];
+    const CRGB base(32, 0, 32);
+    const CRGB peak(128, 0, 128);
+    const CRGB delta(4, 0, 4);
+    for( uint16_t i = 0; i < NUM_LEDS; i++) {
+        if( PixelState[i] == SteadyDim) {
+            // this pixels is currently: SteadyDim
+            // so we randomly consider making it start getting brighter
+            if( random8() < chance) {
+                PixelState[i] = GettingBrighter;
+            }
+        } else if( PixelState[i] == GettingBrighter ) {
+            // this pixels is currently: GettingBrighter
+            // so if it's at peak color, switch it to getting dimmer again
+            if( leds[i] >= peak ) {
+                PixelState[i] = GettingDimmerAgain;
+            } else {
+                // otherwise, just keep brightening it:
+                leds[i] += delta;
+            }
+        } else { // getting dimmer again
+            // this pixels is currently: GettingDimmerAgain
+            // so if it's back to base color, switch it to steady dim
+            if( leds[i] <= base ) {
+                leds[i] = base; // reset to exact base color, in case we overshot
+                PixelState[i] = SteadyDim;
+            } else {
+                // otherwise, just keep dimming it down:
+                leds[i] -= delta;
+            }
+        }
+    }
+    FastLED.show();
+    FastLED.delay(20);
+}
+
+void noisyBlend(bool blendWithPrevious) {
+    static uint16_t dist;
+    EVERY_N_MILLIS(40) {
+        nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
+    }
+    for (int i = 0; i < NUM_LEDS; i++) {
+        uint8_t index = inoise8(i*NOISE_SCALE, dist+i*NOISE_SCALE);
+        CRGB color = ColorFromPalette(currentPalette, index, LOW_BRIGHTNESS);
+        if (blendWithPrevious) {
+            leds[i] = blend(leds[i], color, 255);
+        } else {
+            leds[i] = color;
+        }
+    }
+    dist += beatsin8(10, 1, 4);
+    FastLED.show();
+    FastLED.delay(5);
 }
