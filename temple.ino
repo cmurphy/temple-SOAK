@@ -76,23 +76,7 @@ void sunrise() {
         case 1: // map to twilight colors, aqua through pink
             // https://pastebin.com/r70Qk6Bn
             targetPalette = twilightPalette;
-            EVERY_N_MILLIS(10) {
-                nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
-            }
-            for (int i = 0; i < NUM_RINGS; i++) {
-                for (int j = 0; j < RING; j++) {
-                    int led = i*RING+j;
-                    uint8_t index = inoise8(led*NOISE_SCALE, dist+led*NOISE_SCALE);
-                    if (i == active) {
-                        leds[led] = ColorFromPalette(currentPalette, index, LOW_BRIGHTNESS);
-                    } else if (i < active) {
-                        leds[led] = ColorFromPalette(targetPalette, index, LOW_BRIGHTNESS);
-                    } else {
-                        leds[led] = ColorFromPalette(oldPalette, index, LOW_BRIGHTNESS);
-                    }
-                }
-            }
-            dist += beatsin8(10, 1, 4);
+            paletteBlend(0, active, 10, true, LOW_BRIGHTNESS);
             if (currentPalette == targetPalette) {
                 if (active == NUM_RINGS) {
                     stage++;
@@ -138,13 +122,7 @@ void sunrise() {
             break;
         default: // fade to bright white
             targetPalette = CRGBPalette16(CHSV(60, 0, 255));
-            EVERY_N_MILLIS(40) {
-                nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
-            }
-            for (int i = 0; i < NUM_LEDS; i++) {
-                CRGB color = ColorFromPalette(currentPalette, float(255*i)/NUM_LEDS, MAX_BRIGHTNESS);
-                leds[i] = blend(leds[i], color, beatsin8(10, 1, 4));
-            }
+            paletteBlend(beatsin8(10, 1, 4), -1, 40, false, MAX_BRIGHTNESS);
     }
     FastLED.show();
     FastLED.delay(5);
@@ -173,7 +151,7 @@ void sunset() {
         case 2:
             targetPalette = twilightPalette;
             if (currentPalette == targetPalette) {
-                noisyBlend(false);
+                paletteBlend(0, -1, 40, true, LOW_BRIGHTNESS);
                 EVERY_N_SECONDS(2) {
                     if (delay > 0) {
                         delay--;
@@ -182,13 +160,13 @@ void sunset() {
                     }
                 }
             } else {
-                noisyBlend(true);
+                paletteBlend(255, -1, 40, true, LOW_BRIGHTNESS);
             }
             break;
         default:
             targetPalette = CRGBPalette16(CRGB::White);
             if (currentPalette != targetPalette) {
-                noisyBlend(false);
+                paletteBlend(0, -1, 40, true, LOW_BRIGHTNESS);
             }
     }
 }
@@ -257,16 +235,29 @@ void twinkle(uint8_t chance) {
     FastLED.delay(20);
 }
 
-void noisyBlend(bool blendWithPrevious) {
+void paletteBlend(fract8 blendWithPrevious, int activeRing, uint8_t delay, bool noisy, uint8_t brightness) {
     static uint16_t dist;
-    EVERY_N_MILLIS(40) {
+    EVERY_N_MILLIS(delay) {
         nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
     }
+    CRGBPalette16 palette;
     for (int i = 0; i < NUM_LEDS; i++) {
-        uint8_t index = inoise8(i*NOISE_SCALE, dist+i*NOISE_SCALE);
-        CRGB color = ColorFromPalette(currentPalette, index, LOW_BRIGHTNESS);
+        uint8_t index;
+        if (noisy) {
+            index = inoise8(i*NOISE_SCALE, dist+i*NOISE_SCALE);
+        } else {
+            index = float(255*i)/NUM_LEDS;
+        }
+        CRGB color;
+        if (activeRing < 0 || (i >= activeRing*RING && i < (activeRing+1)*RING)) {
+            color = ColorFromPalette(currentPalette, index, brightness);
+        } else if (i < activeRing*RING) {
+            color = ColorFromPalette(targetPalette, index, brightness);
+        } else {
+            color = ColorFromPalette(oldPalette, index, brightness);
+        }
         if (blendWithPrevious) {
-            leds[i] = blend(leds[i], color, 255);
+            leds[i] = blend(leds[i], color, blendWithPrevious);
         } else {
             leds[i] = color;
         }
