@@ -10,7 +10,7 @@
 
 #define NOISE_SCALE 30
 
-#define NIGHTTIME 1
+#define NIGHTTIME 0
 
 CRGBArray<NUM_LEDS> leds;
 
@@ -24,17 +24,27 @@ DEFINE_GRADIENT_PALETTE(twilightPalette) {
 DEFINE_GRADIENT_PALETTE(sunrisePalette) {
       0, 255,   0,  0, // red
     128, 171,  85,  0, // orange
-    255, 171, 171,  0, // yellow
+    170, 128, 128,  0, // yellow
+    255, 64,    0,  0, // pink
 };
 
-static CRGBPalette16 currentPalette(CRGB::Black);
-static CRGBPalette16 oldPalette(currentPalette);
-static CRGBPalette16 targetPalette(CRGB::DeepSkyBlue);
+CRGBPalette16 currentPalette(CRGB::White);
+CRGBPalette16 oldPalette(currentPalette);
+CRGBPalette16 targetPalette(CRGB::DeepSkyBlue);
 
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
     FastLED.setBrightness(LOW_BRIGHTNESS);
-    leds.fill_solid(CRGB::Black);
+    if (isNighttime()) {
+        leds.fill_solid(CRGB::Black);
+        currentPalette = CRGBPalette16(CRGB::Black);
+    } else {
+        CRGB dimWhite(LOW_BRIGHTNESS, LOW_BRIGHTNESS, LOW_BRIGHTNESS);
+        leds.fill_solid(dimWhite);
+        currentPalette = CRGBPalette16(CRGB::White);
+    }
+    oldPalette = currentPalette;
+    // TODO: synchronize time with RTC
 }
 
 void loop() {
@@ -46,6 +56,7 @@ void loop() {
 }
 
 bool isNighttime() {
+    // TODO: use RTC to check time
     return NIGHTTIME;
 }
 
@@ -57,8 +68,9 @@ void sunrise() {
 
     switch (stage) {
         case 0: // fill rings one by one with deep blue
+            targetPalette = CRGBPalette16(CRGB::DeepSkyBlue);
             EVERY_N_MILLIS(1) {
-                nblendPaletteTowardPalette(currentPalette, targetPalette, 255);
+                nblendPaletteTowardPalette(currentPalette, targetPalette, 128);
             }
             leds(active*RING, (active+1)*RING-1).fill_solid(ColorFromPalette(currentPalette, 0, LOW_BRIGHTNESS));
             if (active > 0) leds(0, active*RING-1).fill_solid(ColorFromPalette(targetPalette, 0, LOW_BRIGHTNESS));
@@ -76,7 +88,7 @@ void sunrise() {
         case 1: // map to twilight colors, aqua through pink
             // https://pastebin.com/r70Qk6Bn
             targetPalette = twilightPalette;
-            paletteBlend(0, active, 10, true, LOW_BRIGHTNESS);
+            paletteBlend(0, active, 1, 80, true, LOW_BRIGHTNESS);
             if (currentPalette == targetPalette) {
                 if (active == NUM_RINGS) {
                     stage++;
@@ -91,14 +103,14 @@ void sunrise() {
         case 2: // graduate to deep sunrise colors, yellow through red
             static uint8_t delay = 5;
             targetPalette = sunrisePalette;
-            if (currentPalette == targetPalette) {
+            if (currentPalette == targetPalette && active >= NUM_RINGS) {
                 stage++;
                 break;
             }
             EVERY_N_MILLIS(40) {
-                nblendPaletteTowardPalette(currentPalette, targetPalette, 12);
+                nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
             }
-            EVERY_N_SECONDS(2) {
+            EVERY_N_SECONDS(1) {
                 if (delay > 0) {
                     delay--;
                 } else {
@@ -111,7 +123,7 @@ void sunrise() {
                     if (i <= active) {
                         uint8_t index = float(255*led)/NUM_LEDS;
                         CRGB color = ColorFromPalette(currentPalette, index, MAX_BRIGHTNESS);
-                        leds[led] = blend(leds[led], color, beatsin8(10, 1, 4));
+                        leds[led] = blend(leds[led], color, beatsin8(30, 1, 8));
                     } else {
                         uint8_t index = inoise8(led*NOISE_SCALE, dist+led*NOISE_SCALE);
                         leds[led] = ColorFromPalette(oldPalette, index, LOW_BRIGHTNESS);
@@ -120,9 +132,15 @@ void sunrise() {
             }
             dist += beatsin8(10, 1, 4);
             break;
-        default: // fade to bright white
-            targetPalette = CRGBPalette16(CHSV(60, 0, 255));
-            paletteBlend(beatsin8(10, 1, 4), -1, 40, false, MAX_BRIGHTNESS);
+        case 3: // lighten to white
+            targetPalette = CRGBPalette16(CRGB::White);
+            paletteBlend(128, -1, 20, 12, false, MAX_BRIGHTNESS);
+            if (currentPalette == targetPalette) {
+                stage++;
+            }
+            break;
+        default: // fade to black
+            leds.fadeToBlackBy(1);
     }
     FastLED.show();
     FastLED.delay(5);
@@ -151,7 +169,7 @@ void sunset() {
         case 2:
             targetPalette = twilightPalette;
             if (currentPalette == targetPalette) {
-                paletteBlend(0, -1, 40, true, LOW_BRIGHTNESS);
+                paletteBlend(0, -1, 40, 24, true, LOW_BRIGHTNESS);
                 EVERY_N_SECONDS(2) {
                     if (delay > 0) {
                         delay--;
@@ -160,13 +178,13 @@ void sunset() {
                     }
                 }
             } else {
-                paletteBlend(255, -1, 40, true, LOW_BRIGHTNESS);
+                paletteBlend(255, -1, 40, 24, true, LOW_BRIGHTNESS);
             }
             break;
         default:
             targetPalette = CRGBPalette16(CRGB::White);
             if (currentPalette != targetPalette) {
-                paletteBlend(0, -1, 40, true, LOW_BRIGHTNESS);
+                paletteBlend(0, -1, 40, 24, true, LOW_BRIGHTNESS);
             }
     }
 }
@@ -235,10 +253,10 @@ void twinkle(uint8_t chance) {
     FastLED.delay(20);
 }
 
-void paletteBlend(fract8 blendWithPrevious, int activeRing, uint8_t delay, bool noisy, uint8_t brightness) {
+void paletteBlend(fract8 blendWithPrevious, int activeRing, uint8_t delay, uint8_t rate, bool noisy, uint8_t brightness) {
     static uint16_t dist;
     EVERY_N_MILLIS(delay) {
-        nblendPaletteTowardPalette(currentPalette, targetPalette, 24);
+        nblendPaletteTowardPalette(currentPalette, targetPalette, rate);
     }
     CRGBPalette16 palette;
     for (int i = 0; i < NUM_LEDS; i++) {
