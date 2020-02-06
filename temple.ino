@@ -413,4 +413,54 @@ char actionB() {
     return ActionB;
 }
 
-char actionC() {Serial.println("action c");}
+// Ripple effect
+// https://github.com/atuline/FastLED-Demos/blob/master/ripple_pal/ripple_pal.ino
+char actionC() {
+    static char timeout = ACTION_TIMEOUT;
+    static uint8_t colour;
+    static int center = 0;
+    static int step = -1;
+    static uint8_t myfade = 255;
+    #define maxsteps 16
+    static uint8_t fadeval = 128;
+    static uint8_t bgcol = 0;
+    EVERY_N_SECONDS(1) {
+        timeout--;
+    }
+    EVERY_N_MILLISECONDS(100) {
+        uint8_t maxChanges = 24;
+        nblendPaletteTowardPalette(currentPalette, targetPalette, maxChanges);
+    }
+    EVERY_N_SECONDS(3) {
+        targetPalette = CRGBPalette16(CHSV(random8(), 255, 32), CHSV(random8(), random8(64)+192, 255), CHSV(random8(), 255, 32), CHSV(random8(), 255, 255));
+    }
+
+    EVERY_N_MILLISECONDS(60) {
+        fadeToBlackBy(leds, NUM_LEDS, fadeval);
+        switch (step) {
+            case -1:
+                center = random(NUM_LEDS);
+                colour = random8();
+                step = 0;
+                break;
+            case 0:
+                leds[center] = ColorFromPalette(currentPalette, colour, myfade, LINEARBLEND);
+                step ++;
+                break;
+            case maxsteps:
+                step = -1;
+                break;
+            default:
+                leds[(center + step + NUM_LEDS) % NUM_LEDS] += ColorFromPalette(currentPalette, colour, myfade/step*2, LINEARBLEND);
+                leds[(center - step + NUM_LEDS) % NUM_LEDS] += ColorFromPalette(currentPalette, colour, myfade/step*2, LINEARBLEND);
+                step ++;
+                break;
+        }
+        FastLED.show();
+    }
+    if (!timeout) {
+        timeout = ACTION_TIMEOUT;
+        return 0;
+    }
+    return ActionC;
+}
