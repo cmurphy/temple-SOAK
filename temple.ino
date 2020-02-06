@@ -9,6 +9,7 @@
 #define MAX_BRIGHTNESS 255
 
 #define NOISE_SCALE 30
+#define ACTION_TIMEOUT 5
 
 #define NIGHTTIME 0
 
@@ -32,7 +33,7 @@ CRGBPalette16 currentPalette(CRGB::White);
 CRGBPalette16 oldPalette(currentPalette);
 CRGBPalette16 targetPalette(CRGB::DeepSkyBlue);
 
-enum { ActionA = '1', ActionB = '2', ActionC = '3'};
+enum { ActionA = '1', ActionB, ActionC };
 
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
@@ -54,21 +55,24 @@ void setup() {
 }
 
 void loop() {
-    char action = processButtonPress();
-    switch(action) {
+    static char next = 0;
+    if (Serial.available()) {
+        next = processButtonPress();
+    }
+    switch(next) {
         case 0:
             break;
         case ActionA:
-            actionA();
-            break;
+            next = actionA();
+            return;
         case ActionB:
-            actionB();
-            break;
+            next = actionB();
+            return;
         case ActionC:
-            actionC();
-            break;
+            next = actionC();
+            return;
         default:
-            Serial.printf("Invalid input '%c'", action);
+            Serial.printf("Invalid input '%c'", next);
     }
     if (isNighttime()) {
         sunset();
@@ -320,6 +324,45 @@ char processButtonPress() {
     return byte;
 }
 
-void actionA() {Serial.println("action a");}
-void actionB() {Serial.println("action b");}
-void actionC() {Serial.println("action c");}
+// Confetti effect
+// https://github.com/atuline/FastLED-Demos/blob/master/confetti/confetti.ino
+// TODO: consider how this looks when rings are in translucent containers
+char actionA() {
+    static char    timeout = ACTION_TIMEOUT;
+    static uint8_t thisfade = 8;
+    static int     thishue = 50;
+    static uint8_t thisinc = 1;
+    static uint8_t thissat = 100;
+    static uint8_t thisbri = 255;
+    static int     huediff = 256;
+    EVERY_N_SECONDS(1) {
+        timeout--;
+    }
+    uint8_t secondHand = (millis() / 1000) % 15;
+    static uint8_t lastSecond = 99;
+    if (lastSecond != secondHand) {
+        lastSecond = secondHand;
+        switch(secondHand) {
+            case  0: thisinc=1; thishue=192; thissat=255; thisfade=2; huediff=256; break;
+            case  5: thisinc=2; thishue=128; thisfade=8; huediff=64; break;
+            case 10: thisinc=1; thishue=random16(255); thisfade=1; huediff=16; break;
+            case 15: break;
+        }
+    }
+
+    EVERY_N_MILLISECONDS(5) {
+        fadeToBlackBy(leds, NUM_LEDS, thisfade);
+        int pos = random16(NUM_LEDS);
+        leds[pos] += CHSV((thishue + random16(huediff))/4 , thissat, thisbri);
+        thishue = thishue + thisinc;
+    }
+    FastLED.show();
+    if (!timeout) {
+        timeout = ACTION_TIMEOUT;
+        return 0;
+    }
+    return ActionA;
+}
+
+char actionB() {Serial.println("action b");}
+char actionC() {Serial.println("action c");}
