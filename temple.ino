@@ -32,6 +32,8 @@ CRGBPalette16 currentPalette(CRGB::White);
 CRGBPalette16 oldPalette(currentPalette);
 CRGBPalette16 targetPalette(CRGB::DeepSkyBlue);
 
+enum { ActionA = '1', ActionB = '2', ActionC = '3'};
+
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
     FastLED.setBrightness(LOW_BRIGHTNESS);
@@ -45,9 +47,29 @@ void setup() {
     }
     oldPalette = currentPalette;
     // TODO: synchronize time with RTC
+
+    // Setup serial input
+    // TODO: change to setup button on pin
+    Serial.begin(9600);
 }
 
 void loop() {
+    char action = processButtonPress();
+    switch(action) {
+        case 0:
+            break;
+        case ActionA:
+            actionA();
+            break;
+        case ActionB:
+            actionB();
+            break;
+        case ActionC:
+            actionC();
+            break;
+        default:
+            Serial.printf("Invalid input '%c'", action);
+    }
     if (isNighttime()) {
         sunset();
     } else {
@@ -284,3 +306,20 @@ void paletteBlend(fract8 blendWithPrevious, int activeRing, uint8_t delay, uint8
     FastLED.show();
     FastLED.delay(5);
 }
+
+char processButtonPress() {
+    int bytesAvailable = Serial.available();
+    if (!bytesAvailable) {
+        return 0;
+    }
+    if (bytesAvailable > 2) {
+        Serial.println("Invalid input");
+    }
+    char byte = Serial.read();
+    Serial.read(); // clear newline
+    return byte;
+}
+
+void actionA() {Serial.println("action a");}
+void actionB() {Serial.println("action b");}
+void actionC() {Serial.println("action c");}
